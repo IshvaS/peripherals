@@ -1,0 +1,130 @@
+`include "timer_regmap.sv"
+
+module timer
+#(
+    parameter APB_ADDR_WIDTH = 12  //APB slaves are 4KB by default
+)
+(
+    input  logic                      HCLK,
+    input  logic                      HRESETn,
+    input  logic [APB_ADDR_WIDTH-1:0] PADDR,
+    input  logic               [31:0] PWDATA,
+    input  logic                      PWRITE,
+    input  logic                      PSEL,
+    input  logic                      PENABLE,
+    output logic               [31:0] PRDATA,
+    output logic                      PREADY,
+    output logic                      PSLVERR,
+
+    output logic                [1:0] irq_o // overflow and cmp interrupt
+);
+
+    // APB register interface
+    logic [`REGS_MAX_IDX-1:0]       register_adr; //register_ad[1:0] because we have 3 registers per timer
+    assign register_adr = PADDR[`REGS_MAX_IDX + 1:2];
+
+    // APB logic: we are always ready to capture the data into our regs
+    // not supporting transfare failure
+    assign PREADY  = 1'b1;
+    assign PSLVERR = 1'b0;
+
+    // registers
+    logic [0:`REGS_MAX_IDX] [31:0]  regs_q, regs_n;
+    logic [31:0] cycle_counter_n, cycle_counter_q;
+
+    logic [2:0] prescaler_int;
+
+    //irq logic
+    always_comb
+    begin
+        irq_o = 2'b0;
+
+        // overflow irq
+        if (regs_q[`REG_TIMER] == 32'hffff_ffff)
+            irq_o[0] = 1'b1;
+
+        // compare match irq if compare reg ist set
+        if (regs_q[`REG_CMP] != 'b0 && regs_q[`REG_TIMER] == regs_q[`REG_CMP])
+            irq_o[1] = 1'b1;
+
+    end
+
+    assign prescaler_int = regs_q[`REG_TIMER_CTRL][`PRESCALER_STOPBIT:`PRESCALER_STARTBIT];
+
+    // register write logic
+    always_comb
+    begin
+        regs_n = regs_q;
+        cycle_counter_n = cycle_counter_q + 1;
+
+        // reset timer after cmp or overflow
+        if (irq_o[0] == 1'b1 || irq_o[1] == 1'b1)
+            regs_n[`REG_TIMER] = 1'b0;
+            
+        else if(regs_q[`REG_TIMER_CTRL][`ENABLE_BIT] && prescaler_int != 'b0 && prescaler_int == cycle_counter_q) // prescaler
+        begin
+            regs_n[`REG_TIMER] = regs_q[`REG_TIMER] + 1; //prescaler mode
+        end
+        else if (regs_q[`REG_TIMER_CTRL][`ENABLE_BIT] && prescaler_int == 'b0) // normal count mode
+            regs_n[`REG_TIMER] = regs_q[`REG_TIMER] + 1;
+
+        // reset prescaler cycle counter
+        if (cycle_counter_q >= prescaler_int)
+            cycle_counter_n = 32'b0;
+
+        // written from APB bus - gets priority
+        if (PSEL && PENABLE && PWRITE)
+        begin
+            case (register_adr)
+                `REG_TIMER:
+                    regs_n[`REG_TIMER] = PWDATA;
+
+                `REG_TIMER_CTRL:
+                    regs_n[`REG_TIMER_CTRL] = PWDATA;
+
+                `REG_CMP:
+                begin
+                    regs_n[`REG_CMP] = PWDATA;
+                    regs_n[`REG_TIMER] = 32'b0; // reset timer if compare register is written
+                end
+            endcase
+        end
+    end
+
+    // synchronouse part
+    always_ff @(posedge HCLK, negedge HRESETn)
+    begin
+        if(~HRESETn)
+        begin
+            regs_q          <= '{default: 32'b0};
+            cycle_counter_q <= 32'b0;
+        end
+        else
+        begin
+            regs_q          <= regs_n;
+            cycle_counter_q <= cycle_counter_n;
+        end
+    end
+
+    // APB register read logic
+    always_comb
+    begin
+        PRDATA = 'b0;
+
+        if (PSEL && PENABLE && !PWRITE)
+        begin
+            case (register_adr)
+                `REG_TIMER:
+                    PRDATA = regs_q[`REG_TIMER];
+
+                `REG_TIMER_CTRL:
+                    PRDATA = regs_q[`REG_TIMER_CTRL];
+
+                `REG_CMP:
+                    PRDATA = regs_q[`REG_CMP];
+            endcase
+
+        end
+    end
+
+endmodule
