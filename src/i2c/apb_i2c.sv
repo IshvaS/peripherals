@@ -3,7 +3,7 @@
 
 module apb_i2c
 #(
-    parameter APB_ADDR_WIDTH = 32  //APB slaves are 4KB by default ---> changed to 32 bit address to align with SoC bus address width 
+    parameter APB_ADDR_WIDTH = 12  //APB slaves are 4KB by default ---> changed to 32 bit address to align with SoC bus address width 
                                    // APB address width is 32 bits, but only bits [5:2] are used to decode the registers, as the registers are word aligned (4 bytes)
 )
 (
@@ -62,7 +62,7 @@ module apb_i2c
     // module body
     //
 
-    assign s_apb_addr = PADDR[7:0];
+    assign s_apb_addr = PADDR[5:2];
 
     always_ff @ (posedge HCLK, negedge HRESETn)
     begin
@@ -106,22 +106,26 @@ module apb_i2c
 
     always_comb
     begin
-        case (s_apb_addr)
-            `REG_CLK_PRESCALER:
-                PRDATA = {16'h0,r_pre};
-            `REG_CTRL:
-                PRDATA = {24'h0,r_ctrl};
-            `REG_RX:
-                PRDATA = {24'h0,s_rx};
-            `REG_STATUS: 
-                PRDATA = {24'h0,s_status};
-            `REG_TX:    
-                PRDATA = {24'h0,r_tx};
-            `REG_CMD:
-                PRDATA = {24'h0,r_cmd};
-            default:
-                PRDATA = 'h0;
-        endcase
+        PRDATA = 32'h0;
+        if(PSEL && PENABLE && !PWRITE)
+        begin
+            case (s_apb_addr)
+                `REG_CLK_PRESCALER:
+                    PRDATA = {16'h0,r_pre};
+                `REG_CTRL:
+                    PRDATA = {24'h0,r_ctrl};
+                `REG_RX:
+                    PRDATA = {24'h0,s_rx};
+                `REG_STATUS: 
+                    PRDATA = {24'h0,s_status};
+                `REG_TX:    
+                    PRDATA = {24'h0,r_tx};
+                `REG_CMD:
+                    PRDATA = {24'h0,r_cmd};
+                default:
+                    PRDATA = 'h0;
+            endcase
+        end
     end
 
     // decode command register

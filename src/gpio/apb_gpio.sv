@@ -2,7 +2,7 @@
 
 module apb_gpio
 #(
-    parameter APB_ADDR_WIDTH = 32  //APB slaves are 4KB by default
+    parameter APB_ADDR_WIDTH = 12  //APB slaves are 4KB by default
 )
 (
     input  logic                      HCLK,
@@ -219,17 +219,10 @@ module apb_gpio
                 PRDATA = r_gpio_sync1;
             `REG_PADOUT:
                 PRDATA = r_gpio_out;
-            `REG_PADOUTSET,
-            `REG_PADOUTCLR:
-                PRDATA = r_gpio_out;
             `REG_INTEN:
                 PRDATA = r_gpio_inten;
             `REG_INTMASK:
                 PRDATA = r_gpio_intmask;
-            `REG_INTSET:
-                PRDATA = 32'h0; //intset is write only reg, read return 0
-            `REG_INTCLR:
-                PRDATA = 32'h0; //intclr is write only reg, read return 0
             `REG_INTTYPE0:
                 PRDATA = r_gpio_inttype0;
             `REG_INTTYPE1:

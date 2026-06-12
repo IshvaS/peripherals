@@ -51,22 +51,30 @@ module timer
 
     assign prescaler_int = regs_q[`REG_TIMER_CTRL][`PRESCALER_STOPBIT:`PRESCALER_STARTBIT];
 
+    logic interrupt, timer_enabled;
+    assign interrupt     = irq_o[0] | irq_o[1];
+    assign timer_enabled = regs_q[`REG_TIMER_CTRL][`ENABLE_BIT];
+
     // register write logic
     always_comb
     begin
         regs_n = regs_q;
         cycle_counter_n = cycle_counter_q + 1;
-
-        // reset timer after cmp or overflow
-        if (irq_o[0] == 1'b1 || irq_o[1] == 1'b1)
-            regs_n[`REG_TIMER] = 1'b0;
             
-        else if(regs_q[`REG_TIMER_CTRL][`ENABLE_BIT] && prescaler_int != 'b0 && prescaler_int == cycle_counter_q) // prescaler
+        if(timer_enabled && prescaler_int != 'b0 && prescaler_int == cycle_counter_q) // prescaler
         begin
-            regs_n[`REG_TIMER] = regs_q[`REG_TIMER] + 1; //prescaler mode
+            if (interrupt) // reset timer on interrupt
+                regs_n[`REG_TIMER] = 1'b0;
+            else
+                regs_n[`REG_TIMER] = regs_q[`REG_TIMER] + 1;
         end
-        else if (regs_q[`REG_TIMER_CTRL][`ENABLE_BIT] && prescaler_int == 'b0) // normal count mode
-            regs_n[`REG_TIMER] = regs_q[`REG_TIMER] + 1;
+        else if (timer_enabled && prescaler_int == 'b0) // normal count mode
+        begin
+            if (interrupt) // reset timer on interrupt
+                regs_n[`REG_TIMER] = 1'b0;
+            else
+                regs_n[`REG_TIMER] = regs_q[`REG_TIMER] + 1;
+        end
 
         // reset prescaler cycle counter
         if (cycle_counter_q >= prescaler_int)
