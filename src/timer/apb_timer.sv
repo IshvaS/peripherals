@@ -54,24 +54,24 @@ module apb_timer
     genvar k;
 
     generate
-    for(k = 0; k < TIMER_CNT; k++)
-    begin : TIMER_GEN
-      timer timer_i
-      (
-          .HCLK       ( HCLK          ),
-          .HRESETn    ( HRESETn       ),
+        for(k = 0; k < TIMER_CNT; k++)
+        begin : TIMER_GEN
+        timer timer_i
+        (
+            .HCLK       ( HCLK          ),
+            .HRESETn    ( HRESETn       ),
 
-          .PADDR      ( PADDR        ),
-          .PWDATA     ( PWDATA       ),
-          .PWRITE     ( PWRITE       ),
-          .PSEL       ( psel_int[k]  ),
-          .PENABLE    ( PENABLE      ),
-          .PRDATA     ( prdata[k]    ),
-          .PREADY     ( pready[k]    ),
-          .PSLVERR    ( pslverr[k]   ),
+            .PADDR      ( PADDR        ),
+            .PWDATA     ( PWDATA       ),
+            .PWRITE     ( PWRITE       ),
+            .PSEL       ( psel_int[k]  ),
+            .PENABLE    ( PENABLE      ),
+            .PRDATA     ( prdata[k]    ),
+            .PREADY     ( pready[k]    ),
+            .PSLVERR    ( pslverr[k]   ),
 
-          .irq_o      ( irq_o[2*k+1 : 2*k] )
-      );
-    end
-endgenerate
+            .irq_o      ( irq_o[2*k+1 : 2*k] )
+        );
+        end
+    endgenerate
 endmodule
