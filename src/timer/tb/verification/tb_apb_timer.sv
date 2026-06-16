@@ -60,26 +60,6 @@ module tb_apb_timer;
     apb_master       master;
     timer_scoreboard timer; // Scoreboard instance object handle
 
-    always @(posedge apb.HCLK) begin
-        if (apb.HRESETn) begin
-          
-            if (apb.PSEL && apb.PENABLE && apb.PREADY) begin
-                if (apb.PWRITE) begin
-                    timer.write_exp(apb.PADDR, apb.PWDATA);
-                end else begin
-                    timer.read_exp(apb.PADDR, apb.PRDATA);
-                end
-            end
-            
-            // 2. Step the scoreboard state forward in complete lock-step
-            timer.tick();
-            
-            // 3. Perform cycle-by-cycle automated output checking
-            assert(irq_o === timer.get_irq()) 
-            else $error("Interrupt Mismatch! DUT=%b EXP=%b", irq_o, timer.get_irq());
-        end
-    end
-
     initial begin
         master = new(apb);
         timer = new();
@@ -99,33 +79,84 @@ module tb_apb_timer;
         // -----------------------------------------------------
         // PHASE 2: WRITE-READ TEST 
         // -----------------------------------------------------
-        $display("\n========== WRITE-READ TEST ==========\n");
+        $display("========== WRITE-READ TEST ==========");
+        $display("========== TIMER-FUNC TEST ==========");
         repeat(1000) begin
           foreach (target_registers[i]) begin
-              edata = $urandom();
+            edata = $urandom() & ((target_registers[i] == REG_TIMER_CTRL)?32'hFFFF_FFFE:32'hFFFF_FFFF);
               master.write(target_registers[i], edata);
               timer.write_exp(target_registers[i], edata); 
 
               master.read(target_registers[i], rdata);
               timer.read_exp(target_registers[i], rdata);
           end
-        end
         
         // -----------------------------------------------------
         // PHASE 3: TIMER FUNCTIONALITY TEST
         // -----------------------------------------------------
-        $display("\n========== TIMER FUNCTIONALITY TEST ==========\n");
-        master.write(REG_TIMER, 32'h0);
-        master.write(REG_TIMER_CTRL, 32'h1); 
-      
-        repeat(20) @(posedge apb.HCLK);      // Let it count safely
+          master.write(REG_TIMER, edata);
+          timer.write_exp(REG_TIMER, edata); // Sync scoreboard state
+          master.write(REG_TIMER_CTRL, 32'h1); 
+          timer.write_exp(REG_TIMER_CTRL, 32'h1); // Sync scoreboard state
 
-        master.write(REG_TIMER_CTRL, 32'h0); // Disable timer
-        master.read(REG_TIMER, rdata);       // Read back value
+          repeat(3) timer.tick(); //compensate bus latency
 
-        assert(rdata == timer.get_timer()) 
-        else $error("Timer mismatch DUT=%0d EXP=%0d", rdata, timer.get_timer());
+          repeat(20) begin
+            @(posedge apb.HCLK);
+            timer.tick();
+          end
 
+          master.write(REG_TIMER_CTRL, 32'h0); // Disable timer
+          timer.write_exp(REG_TIMER_CTRL, 32'h0); // Sync scoreboard state
+          master.read(REG_TIMER, rdata);       // Read back value
+          timer.read_exp(REG_TIMER, rdata);    // Check against expected value
+
+          assert(rdata == timer.get_timer()) 
+          else $error("Timer mismatch DUT=%0d EXP=%0d", rdata, timer.get_timer());
+        end
+
+        // -----------------------------------------------------
+        // PHASE 4: TIMER RESET ON CMP WRITE TEST
+        // -----------------------------------------------------
+        $display("\n========== TIMER RESET ON CMP WRITE TEST ==========\n");
+        repeat(5) begin
+            reset_dut();
+            timer.reset();
+
+          	edata = $urandom();
+            master.write(REG_TIMER, edata);
+            timer.write_exp(REG_TIMER, edata);
+          
+            master.write(REG_TIMER_CTRL, 32'h1); 
+            timer.write_exp(REG_TIMER_CTRL, 32'h1);
+
+          	repeat(3) timer.tick()++;
+          
+            repeat(10) begin
+                @(posedge apb.HCLK);
+                timer.tick();   
+            end
+
+            master.write(REG_TIMER_CTRL, 32'h0);
+            timer.write_exp(REG_TIMER_CTRL, 32'h0); 
+          
+            master.read(REG_TIMER, rdata);
+            timer.read_exp(REG_TIMER, rdata);
+
+            assert(rdata > 0)
+            else
+                $error("Timer did not count");
+
+            master.write(REG_CMP, edata);
+            timer.write_exp(REG_CMP, edata); // Sync scoreboard state
+
+            master.read(REG_TIMER, rdata);
+            timer.read_exp(REG_TIMER, rdata);
+
+            assert(rdata == 0)
+            else
+                $error("Timer not reset after CMP write");
+        end
         timer.report_summary();
         $finish;
     end

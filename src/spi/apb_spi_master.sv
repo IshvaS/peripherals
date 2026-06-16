@@ -112,7 +112,7 @@ module apb_spi_master
 
     always_ff @(posedge HCLK, negedge HRESETn)
     begin
-        if(~HRESETn)
+        if(!HRESETn)
         begin
             r_state_tx <= INT_TX_ACTIVE;
             r_state_rx <= INT_RX_ACTIVE;
@@ -126,7 +126,7 @@ module apb_spi_master
 
     always_ff @(posedge HCLK, negedge HRESETn)
     begin
-        if(~HRESETn)
+        if(!HRESETn)
         begin
             r_counter_tx <= 'h0;
             r_counter_rx <= 'h0;
@@ -164,37 +164,37 @@ module apb_spi_master
         s_int_tx        = 1'b0;
 
         case(r_state_tx)
-        INT_TX_ACTIVE:
-        begin
-            if (s_rise_int_tx && s_int_en)
-                s_state_tx_next = GEN_INT_TX;
-        end
-
-        GEN_INT_TX:
-        begin
-            s_int_tx = 1'b1;
-            s_state_tx_next = INT_TX_INACTIVE;
-        end
-
-        INT_TX_INACTIVE:
-        begin
-            if (s_int_cnt_en)
+            INT_TX_ACTIVE:
             begin
-                if ((spi_ctrl_data_tx_valid && spi_ctrl_data_tx_ready) && (r_counter_tx == s_cnt_tx-1))
-                    s_state_tx_next = INT_TX_ACTIVE;
+                if (s_rise_int_tx && s_int_en)
+                    s_state_tx_next = GEN_INT_TX;
             end
-            else
-            begin
-                if (s_int_rd_intsta)
-                    s_state_tx_next = INT_TX_ACTIVE;
-            end
-        end
 
-        default :
-        begin
-            s_state_tx_next = r_state_tx;
-            s_int_tx        = 1'b0;
-        end
+            GEN_INT_TX:
+            begin
+                s_int_tx = 1'b1;
+                s_state_tx_next = INT_TX_INACTIVE;
+            end
+
+            INT_TX_INACTIVE:
+            begin
+                if (s_int_cnt_en)
+                begin
+                    if ((spi_ctrl_data_tx_valid && spi_ctrl_data_tx_ready) && (r_counter_tx == s_cnt_tx-1))
+                        s_state_tx_next = INT_TX_ACTIVE;
+                end
+                else
+                begin
+                    if (s_int_rd_intsta)
+                        s_state_tx_next = INT_TX_ACTIVE;
+                end
+            end
+
+            default :
+            begin
+                s_state_tx_next = r_state_tx;
+                s_int_tx        = 1'b0;
+            end
         endcase
     end
 
@@ -205,31 +205,31 @@ module apb_spi_master
         s_int_rx        = 1'b0;
 
         case(r_state_rx)
-        INT_RX_ACTIVE:
-        begin
-            if (s_rise_int_rx && s_int_en)
-                s_state_rx_next = GEN_INT_RX;
-        end
-
-        GEN_INT_RX:
-        begin
-            s_int_rx = 1'b1;
-            s_state_rx_next = INT_RX_INACTIVE;
-        end
-
-        INT_RX_INACTIVE:
-        begin
-            if (s_int_cnt_en)
+            INT_RX_ACTIVE:
             begin
-                if ((spi_ctrl_data_rx_valid && spi_ctrl_data_rx_ready) && (r_counter_rx == s_cnt_rx-1))
+                if (s_rise_int_rx && s_int_en)
+                    s_state_rx_next = GEN_INT_RX;
+            end
+
+            GEN_INT_RX:
+            begin
+                s_int_rx = 1'b1;
+                s_state_rx_next = INT_RX_INACTIVE;
+            end
+
+            INT_RX_INACTIVE:
+            begin
+                if (s_int_cnt_en)
+                begin
+                    if ((spi_ctrl_data_rx_valid && spi_ctrl_data_rx_ready) && (r_counter_rx == s_cnt_rx-1))
+                        s_state_rx_next = INT_RX_ACTIVE;
+                end
+                else
+                begin
+                if (s_int_rd_intsta)
                     s_state_rx_next = INT_RX_ACTIVE;
+                end
             end
-            else
-            begin
-              if (s_int_rd_intsta)
-                  s_state_rx_next = INT_RX_ACTIVE;
-            end
-        end
         endcase
     end
 

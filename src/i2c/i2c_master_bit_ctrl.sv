@@ -36,7 +36,7 @@
 // Tbuf        4.7us            1.3us   Bus free time between a stop and start condition
 //
 
-`include "i2c_master_defines.sv"
+import i2c_pkg::*;
 
 module i2c_master_bit_ctrl
 (
@@ -106,7 +106,7 @@ module i2c_master_bit_ctrl
 
     // generate clk enable signal
     always @(posedge clk or negedge nReset)
-      if (~nReset)
+      if (!nReset)
       begin
           cnt    <= 16'h0;
           clk_en <= 1'b1;
@@ -172,7 +172,7 @@ module i2c_master_bit_ctrl
 
     // generate filtered SCL and SDA signals
     always @(posedge clk or negedge nReset)
-      if (~nReset)
+      if (!nReset)
       begin
           sSCL <= 1'b1;
           sSDA <= 1'b1;
@@ -194,7 +194,7 @@ module i2c_master_bit_ctrl
     reg sta_condition;
     reg sto_condition;
     always @(posedge clk or negedge nReset)
-      if (~nReset)
+      if (!nReset)
       begin
           sta_condition <= 1'b0;
           sto_condition <= 1'b0;
@@ -220,13 +220,13 @@ module i2c_master_bit_ctrl
     // 2) stop detected while not requested
     reg cmd_stop;
     always @(posedge clk or negedge nReset)
-      if (~nReset)
+      if (!nReset)
           cmd_stop <= 1'b0;
       else if (clk_en)
           cmd_stop <= cmd == `I2C_CMD_STOP;
 
     always @(posedge clk or negedge nReset)
-      if (~nReset)
+      if (!nReset)
           al <= 1'b0;
       else
           al <= (sda_chk & ~sSDA & sda_oen) | (|c_state & sto_condition & ~cmd_stop);
@@ -287,10 +287,10 @@ module i2c_master_bit_ctrl
                     idle:
                     begin
                         case (cmd) // synopsys full_case parallel_case
-                             `I2C_CMD_START: c_state <= start_a;
-                             `I2C_CMD_STOP:  c_state <= stop_a;
-                             `I2C_CMD_WRITE: c_state <= wr_a;
-                             `I2C_CMD_READ:  c_state <= rd_a;
+                             I2C_CMD_START: c_state <= start_a;
+                             I2C_CMD_STOP:  c_state <= stop_a;
+                             I2C_CMD_WRITE: c_state <= wr_a;
+                             I2C_CMD_READ:  c_state <= rd_a;
                              default:        c_state <= idle;
                         endcase
 
@@ -447,8 +447,6 @@ module i2c_master_bit_ctrl
               endcase
       end
 
-    //FIXME ANTONIO CHECK
-    // assign scl and sda output (always gnd)
     assign scl_o = 1'b0;
     assign sda_o = 1'b0;
 

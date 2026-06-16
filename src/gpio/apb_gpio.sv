@@ -1,5 +1,5 @@
-`include "peripherals_regmap_pkg.sv"
-import peripherals_regmap_pkg::*;
+`include "peripherals_pkg.sv"
+import gpio_pkg::*;
 
 module apb_gpio
 #(

@@ -1,11 +1,12 @@
+import uart_pkg::*;
+
 module apb_uart_sv
 #(
     parameter APB_ADDR_WIDTH = 12  //APB slaves are 4KB by default
 )
 (
-    input  logic                      CLK,
-    input  logic                      RSTN,
-
+    input  logic                      HCLK,
+    input  logic                      HResetn,
 
     input  logic [APB_ADDR_WIDTH-1:0] PADDR,
     input  logic               [31:0] PWDATA,
@@ -21,9 +22,6 @@ module apb_uart_sv
 
     output logic                      event_o    // interrupt/event output
 );
-    // register addresses
-    parameter RBR = 3'h0, THR = 3'h0, DLL = 3'h0, IER = 3'h1, DLM = 3'h1, IIR = 3'h2,
-              FCR = 3'h2, LCR = 3'h3, MCR = 3'h4, LSR = 3'h5, MSR = 3'h6, SCR = 3'h7;
 
     parameter TX_FIFO_DEPTH = 16; // in bytes
     parameter RX_FIFO_DEPTH = 16; // in bytes
@@ -64,17 +62,20 @@ module apb_uart_sv
     logic             [$clog2(TX_FIFO_DEPTH):0] tx_elements;
     logic             [$clog2(RX_FIFO_DEPTH):0] rx_elements;
 
-    // TODO: check that stop bits are really not necessary here
+    wire write_enable = PSEL && PENABLE && PWRITE;
+    wire read_enable  = PSEL && PENABLE && !PWRITE;
+    assign register_adr = PADDR[4:2];
+
     uart_rx uart_rx_i
     (
-        .clk_i              ( CLK                           ),
-        .rstn_i             ( RSTN                          ),
+        .clk_i              ( HCLK                          ),
+        .rstn_i             ( HResetn                       ),
         .rx_i               ( rx_i                          ),
         .cfg_en_i           ( 1'b1                          ),
-        .cfg_div_i          ( {regs_q[DLM + 'd8], regs_q[DLL + 'd8]}    ),
-        .cfg_parity_en_i    ( regs_q[LCR][3]                ),
-        .cfg_bits_i         ( regs_q[LCR][1:0]              ),
-        // .cfg_stop_bits_i    ( regs_q[LCR][2]                ),
+        .cfg_div_i          ( {regs_q[REG_DLM + 'd8], regs_q[REG_DLL + 'd8]}    ),
+        .cfg_parity_en_i    ( regs_q[REG_LCR][3]                ),
+        .cfg_bits_i         ( regs_q[REG_LCR][1:0]              ),
+        // .cfg_stop_bits_i    ( regs_q[REG_LCR][2]                ),
         /* verilator lint_off PINCONNECTEMPTY */
         .busy_o             (                               ),
         /* lint_on */
@@ -87,17 +88,17 @@ module apb_uart_sv
 
     uart_tx uart_tx_i
     (
-        .clk_i              ( CLK                           ),
-        .rstn_i             ( RSTN                          ),
+        .clk_i              ( HCLK                          ),
+        .rstn_i             ( HResetn                       ),
         .tx_o               ( tx_o                          ),
         /* verilator lint_off PINCONNECTEMPTY */
         .busy_o             (                               ),
         /* lint_on */
         .cfg_en_i           ( 1'b1                          ),
-        .cfg_div_i          ( {regs_q[DLM + 'd8], regs_q[DLL + 'd8]}    ),
-        .cfg_parity_en_i    ( regs_q[LCR][3]                ),
-        .cfg_bits_i         ( regs_q[LCR][1:0]              ),
-        .cfg_stop_bits_i    ( regs_q[LCR][2]                ),
+        .cfg_div_i          ( {regs_q[REG_DLM + 'd8], regs_q[REG_DLL + 'd8]}    ),
+        .cfg_parity_en_i    ( regs_q[REG_LCR][3]                ),
+        .cfg_bits_i         ( regs_q[REG_LCR][1:0]              ),
+        .cfg_stop_bits_i    ( regs_q[REG_LCR][2]                ),
 
         .tx_data_i          ( tx_data                       ),
         .tx_valid_i         ( tx_valid                      ),
@@ -111,8 +112,8 @@ module apb_uart_sv
     )
     uart_rx_fifo_i
     (
-        .clk_i              ( CLK                           ),
-        .rstn_i             ( RSTN                          ),
+        .clk_i              ( HCLK                           ),
+        .rstn_i             ( HResetn                       ),
 
         .clr_i              ( rx_fifo_clr_q                 ),
 
@@ -134,8 +135,8 @@ module apb_uart_sv
     )
     uart_tx_fifo_i
     (
-        .clk_i              ( CLK                           ),
-        .rstn_i             ( RSTN                          ),
+        .clk_i              ( HCLK                           ),
+        .rstn_i             ( HResetn                       ),
 
         .clr_i              ( tx_fifo_clr_q                 ),
 
@@ -158,16 +159,16 @@ module apb_uart_sv
     )
     uart_interrupt_i
     (
-        .clk_i              ( CLK                           ),
-        .rstn_i             ( RSTN                          ),
+        .clk_i              ( HCLK                           ),
+        .rstn_i             ( HResetn                       ),
 
 
-        .IER_i              ( regs_q[IER][2:0]              ), // interrupt enable register
-        .RDA_i              ( regs_n[LSR][5]                ), // receiver data available
+        .IER_i              ( regs_q[REG_IER][2:0]              ), // interrupt enable register
+        .RDA_i              ( regs_n[REG_LSR][5]                ), // receiver data available
         .CTI_i              ( 1'b0                          ), // character timeout indication
 
 
-        .error_i            ( regs_n[LSR][2]                ),
+        .error_i            ( regs_n[REG_LSR][2]                ),
         .rx_elements_i      ( rx_elements                   ),
         .tx_elements_i      ( tx_elements                   ),
         .trigger_level_i    ( trigger_level_q               ),
@@ -192,24 +193,24 @@ module apb_uart_sv
         rx_fifo_clr_n   = 1'b0; // self clearing
 
         // rx status
-        regs_n[LSR][0] = fifo_rx_valid; // fifo is empty
+        regs_n[REG_LSR][0] = fifo_rx_valid; // fifo is empty
 
         // parity error on receiving part has occured
-        regs_n[LSR][2] = fifo_rx_data[8]; // parity error is detected when element is retrieved
+        regs_n[REG_LSR][2] = fifo_rx_data[8]; // parity error is detected when element is retrieved
 
         // tx status register
-        regs_n[LSR][5] = ~ (|tx_elements); // fifo is empty
-        regs_n[LSR][6] = tx_ready & ~ (|tx_elements); // shift register and fifo are empty
+        regs_n[REG_LSR][5] = ~ (|tx_elements); // fifo is empty
+        regs_n[REG_LSR][6] = tx_ready & ~ (|tx_elements); // shift register and fifo are empty
 
-        if (PSEL && PENABLE && PWRITE)
+        if (write_enable)
         begin
             case (register_adr)
 
-                THR: // either THR or DLL
+                REG_THR: // either THR or DLL
                 begin
-                    if (regs_q[LCR][7]) // Divisor Latch Access Bit (DLAB)
+                    if (regs_q[REG_LCR][7]) // Divisor Latch Access Bit (DLAB)
                     begin
-                        regs_n[DLL + 'd8] = PWDATA[7:0];
+                        regs_n[REG_DLL + 'd8] = PWDATA[7:0];
                     end
                     else
                     begin
@@ -218,18 +219,18 @@ module apb_uart_sv
                     end
                 end
 
-                IER: // either IER or DLM
+                REG_IER: // either IER or DLM
                 begin
-                    if (regs_q[LCR][7]) // Divisor Latch Access Bit (DLAB)
-                        regs_n[DLM + 'd8] = PWDATA[7:0];
+                    if (regs_q[REG_LCR][7]) // Divisor Latch Access Bit (DLAB)
+                        regs_n[REG_DLM + 'd8] = PWDATA[7:0];
                     else
-                        regs_n[IER] = PWDATA[7:0];
+                        regs_n[REG_IER] = PWDATA[7:0];
                 end
 
-                LCR:
-                    regs_n[LCR] = PWDATA[7:0];
+                REG_LCR:
+                    regs_n[REG_LCR] = PWDATA[7:0];
 
-                FCR: // write only register, fifo control register
+                REG_FCR: // write only register, fifo control register
                 begin
                     rx_fifo_clr_n   = PWDATA[1];
                     tx_fifo_clr_n   = PWDATA[2];
@@ -253,13 +254,13 @@ module apb_uart_sv
         fifo_rx_ready_n = 1'b0;
         clr_int      = 4'b0;
 
-        if (PSEL && PENABLE && !PWRITE)
+        if (read_enable)
         begin
             case (register_adr)
-                RBR: // either RBR or DLL
+                REG_RBR: // either RBR or DLL
                 begin
-                    if (regs_q[LCR][7]) // Divisor Latch Access Bit (DLAB)
-                        PRDATA = {24'b0, regs_q[DLL + 'd8]};
+                    if (regs_q[REG_LCR][7]) // Divisor Latch Access Bit (DLAB)
+                        PRDATA = {24'b0, regs_q[REG_DLL + 'd8]};
                     else
                     begin
 
@@ -271,24 +272,24 @@ module apb_uart_sv
                     end
                 end
 
-                LSR: // Line Status Register
+                REG_LSR: // Line Status Register
                 begin
-                    PRDATA = {24'b0, regs_q[LSR]};
+                    PRDATA = {24'b0, regs_q[REG_LSR]};
                     clr_int = 4'b1100; // clear parrity interrupt error
                 end
 
-                LCR: // Line Control Register
-                    PRDATA = {24'b0, regs_q[LCR]};
+                REG_LCR: // Line Control Register
+                    PRDATA = {24'b0, regs_q[REG_LCR]};
 
-                IER: // either IER or DLM
+                REG_IER: // either IER or DLM
                 begin
-                    if (regs_q[LCR][7]) // Divisor Latch Access Bit (DLAB)
-                        PRDATA = {24'b0, regs_q[DLM + 'd8]};
+                    if (regs_q[REG_LCR][7]) // Divisor Latch Access Bit (DLAB)
+                        PRDATA = {24'b0, regs_q[REG_DLM + 'd8]};
                     else
-                        PRDATA = {24'b0, regs_q[IER]};
+                        PRDATA = {24'b0, regs_q[REG_IER]};
                 end
 
-                IIR: // interrupt identification register read only
+                REG_IIR: // interrupt identification register read only
                 begin
                     PRDATA = {24'b0, 1'b1, 1'b1, 2'b0, IIR_o};
                     clr_int = 4'b0100; // clear Transmitter Holding Register Empty
@@ -300,20 +301,20 @@ module apb_uart_sv
     end
 
     // synchronouse part
-    always_ff @(posedge CLK, negedge RSTN)
+    always_ff @(posedge HCLK, negedge HResetn)
     begin
-        if(~RSTN)
+        if(!HResetn)
         begin
 
-            regs_q[IER]       <= 8'h0;
-            regs_q[IIR]       <= 8'h1;
-            regs_q[LCR]       <= 8'h0;
-            regs_q[MCR]       <= 8'h0;
-            regs_q[LSR]       <= 8'h60;
-            regs_q[MSR]       <= 8'h0;
-            regs_q[SCR]       <= 8'h0;
-            regs_q[DLM + 'd8] <= 8'h0;
-            regs_q[DLL + 'd8] <= 8'h0;
+            regs_q[REG_IER]       <= 8'h0;
+            regs_q[REG_IIR]       <= 8'h1;
+            regs_q[REG_LCR]       <= 8'h0;
+            regs_q[REG_MCR]       <= 8'h0;
+            regs_q[REG_LSR]       <= 8'h60;
+            regs_q[REG_MSR]       <= 8'h0;
+            regs_q[REG_SCR]       <= 8'h0;
+            regs_q[REG_DLM + 'd8] <= 8'h0;
+            regs_q[REG_DLL + 'd8] <= 8'h0;
 
             trigger_level_q <= 2'b00;
             tx_fifo_clr_q   <= 1'b0;
@@ -333,9 +334,7 @@ module apb_uart_sv
         end
     end
 
-    assign register_adr = {PADDR[2:0]};
-    // APB logic: we are always ready to capture the data into our regs
-    // not supporting transfare failure
     assign PREADY  = 1'b1;
     assign PSLVERR = 1'b0;
+
 endmodule
