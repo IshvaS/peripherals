@@ -15,7 +15,7 @@ module tb_apb_timer;
     logic PCLK;
     wire [1:0] irq_o;
 
-    apb_timer dut (
+    timer dut (
         .HCLK        (apb.HCLK),
         .HRESETn     (apb.HRESETn),
         .PSEL        (apb.PSEL),
@@ -43,7 +43,6 @@ module tb_apb_timer;
     begin
         apb.HRESETn = 1'b0;
         master.init();
-        gpio_in = 0;
         repeat(5) @(posedge apb.HCLK);
         apb.HRESETn = 1'b1;
         repeat(2) @(posedge apb.HCLK);
@@ -51,22 +50,42 @@ module tb_apb_timer;
     end
     endtask
 
-    logic [31:0] wdata, rdata;
+    logic [31:0] edata, rdata;
   
     logic [APB_ADDR_WIDTH-1:0] target_registers[] = '{
-        REG_TIMER,      REG_TIMER_CTRL, REG_CMP
+        REG_TIMER, REG_TIMER_CTRL, REG_CMP
     };
   
     apb_if           apb(PCLK);
     apb_master       master;
     timer_scoreboard timer; // Scoreboard instance object handle
 
+    always @(posedge apb.HCLK) begin
+        if (apb.HRESETn) begin
+          
+            if (apb.PSEL && apb.PENABLE && apb.PREADY) begin
+                if (apb.PWRITE) begin
+                    timer.write_exp(apb.PADDR, apb.PWDATA);
+                end else begin
+                    timer.read_exp(apb.PADDR, apb.PRDATA);
+                end
+            end
+            
+            // 2. Step the scoreboard state forward in complete lock-step
+            timer.tick();
+            
+            // 3. Perform cycle-by-cycle automated output checking
+            assert(irq_o === timer.get_irq()) 
+            else $error("Interrupt Mismatch! DUT=%b EXP=%b", irq_o, timer.get_irq());
+        end
+    end
+
     initial begin
         master = new(apb);
         timer = new();
         
         reset_dut();
-        timer.golden_model.reset(); // Establish baseline state predictions
+        timer.reset(); // Establish baseline state predictions
 
         // -----------------------------------------------------
         // PHASE 1: RESET TEST
@@ -74,207 +93,40 @@ module tb_apb_timer;
         $display("\n========== RESET TEST ==========\n");
         for(int i=0; i< target_registers.size(); i++) begin
             master.read(target_registers[i], rdata);
-            timer.read_exp(target_registers[i], rdata, gpio_in);
+            timer.read_exp(target_registers[i], rdata);
         end
-      
+
         // -----------------------------------------------------
-        // PHASE 2: ADVANCED RANDOMIZED STRESS TEST
+        // PHASE 2: WRITE-READ TEST 
         // -----------------------------------------------------
-        $display("\n========== STARTING RANDOM CRV STRESS TEST ==========\n");
+        $display("\n========== WRITE-READ TEST ==========\n");
+        repeat(1000) begin
+          foreach (target_registers[i]) begin
+              edata = $urandom();
+              master.write(target_registers[i], edata);
+              timer.write_exp(target_registers[i], edata); 
 
-      	repeat(1000) begin
-            for(int i=0; i< target_registers.size(); i++) begin
-                
-                if (target_registers[i] == REG_INTSTATUS) continue;
-
-                gpio_in = $random;
-                wdata = $random;
-                
-                master.write(target_registers[i], wdata);
-                gpio.write_exp(target_registers[i], wdata);
-                
-                @(posedge apb.HCLK); // Minor settling step
-
-                if (target_registers[i] == REG_PADOUTSET || target_registers[i] == REG_PADOUTCLR) begin
-                    master.read(REG_PADOUT, rdata);
-                    gpio.read_exp(REG_PADOUT, rdata, gpio_in);
-                end 
-
-                else begin
-                    master.read(target_registers[i], rdata);
-                    gpio.read_exp(target_registers[i], rdata, gpio_in); 
-                end        
-            end
-        end
-      
-      	$display("\n========== RISING EDGE INTERRUPT TEST ==========\n");
-
-		reset_dut();
-
-		master.write(REG_PADDIR,   32'h0);
-		master.write(REG_INTEN,    32'h1);
-		master.write(REG_INTTYPE1, 32'h1);
-		master.write(REG_INTTYPE0, 32'h0);
-
-		gpio_in = 32'h0;
-		repeat(3) @(posedge apb.HCLK);
-
-		gpio_in = 32'h1;
-		repeat(3) @(posedge apb.HCLK);
-	
-		master.read(REG_INTSTATUS, rdata);
-
-		assert(rdata[0]);
-		assert(interrupt);
-      
-      	$display("\n========== FALLING EDGE INTERRUPT TEST ==========\n");
-
-        reset_dut();
-
-        master.write(REG_PADDIR,   32'h0);
-        master.write(REG_INTEN,    32'h1);
-        master.write(REG_INTTYPE1, 32'h1);
-        master.write(REG_INTTYPE0, 32'h1);
-
-        gpio_in = 32'h1;
-        repeat(3) @(posedge apb.HCLK);
-
-        gpio_in = 32'h0;
-        repeat(3) @(posedge apb.HCLK);
-
-        master.read(REG_INTSTATUS, rdata);
-
-        assert(rdata[0]);
-        assert(interrupt);
-      
-      	$display("\n========== HIGH LEVEL INTERRUPT TEST ==========\n");
-
-        reset_dut();
-
-        master.write(REG_PADDIR,   32'h0);
-        master.write(REG_INTEN,    32'h1);
-        master.write(REG_INTTYPE1, 32'h0);
-        master.write(REG_INTTYPE0, 32'h0);
-
-        gpio_in = 32'h1;
-
-        repeat(3) @(posedge apb.HCLK);
-
-        master.read(REG_INTSTATUS, rdata);
-
-        assert(rdata[0]);
-        assert(interrupt);
-      
-      	$display("\n========== LOW LEVEL INTERRUPT TEST ==========\n");
-
-        reset_dut();
-
-        master.write(REG_PADDIR,   32'h0);
-        master.write(REG_INTEN,    32'h1);
-        master.write(REG_INTTYPE1, 32'h0);
-        master.write(REG_INTTYPE0, 32'h1);
-
-        gpio_in = 32'h0;
-
-        repeat(3) @(posedge apb.HCLK);
-
-        master.read(REG_INTSTATUS, rdata);
-
-        assert(rdata[0]);
-        assert(interrupt);
-      
-      	$display("\n========== SOFTWARE INTERRUPT SET TEST ==========\n");
-
-        reset_dut();
-
-        master.write(REG_INTSET, 32'h1);
-
-        repeat(2) @(posedge apb.HCLK);
-
-        master.read(REG_INTSTATUS, rdata);
-
-        assert(rdata[0]);
-        assert(interrupt);
-      
-      	$display("\n========== INTERRUPT CLEAR TEST ==========\n");
-
-        master.write(REG_INTCLR, 32'h1);
-
-        repeat(2) @(posedge apb.HCLK);
-
-        master.read(REG_INTSTATUS, rdata);
-
-        assert(rdata[0] == 0);
-        assert(interrupt == 0);
-      
-      	$display("\n========== INTERRUPT MASK TEST ==========\n");
-
-        reset_dut();
-
-        master.write(REG_INTSET, 32'h1);
-
-        repeat(2) @(posedge apb.HCLK);
-
-        master.write(REG_INTMASK, 32'h1);
-
-        repeat(2) @(posedge apb.HCLK);
-
-        master.read(REG_INTSTATUS, rdata);
-
-        assert(rdata[0]);
-        assert(interrupt == 0);
-      
-      	$display("========== INTERRUPT DISABLE TEST ==========");
-
-        reset_dut();
-
-        master.write(REG_PADDIR,   32'h0);
-        master.write(REG_INTEN,    32'h0);
-        master.write(REG_INTTYPE1, 32'h1);
-        master.write(REG_INTTYPE0, 32'h0);
-
-        gpio_in = 32'h0;
-        repeat(3) @(posedge apb.HCLK);
-
-        gpio_in = 32'h1;
-        repeat(3) @(posedge apb.HCLK);
-
-        master.read(REG_INTSTATUS, rdata);
-
-        assert(rdata[0] == 0);
-        assert(interrupt == 0);
-      	
-      	$display("========== MULTIPLE INTERRUPT TEST ==========");
-
-        reset_dut();
-
-        master.write(REG_PADDIR,   32'h0);
-        master.write(REG_INTEN,    32'hF);
-        master.write(REG_INTTYPE1, 32'hF);
-        master.write(REG_INTTYPE0, 32'h0);
-
-        gpio_in = 0;
-        repeat(3) @(posedge apb.HCLK);
-
-        gpio_in = 32'hF;
-        repeat(3) @(posedge apb.HCLK);
-
-        master.read(REG_INTSTATUS,rdata);
-
-        assert(rdata[3:0] == 4'hF);
-        assert(interrupt);
-    
-        // -----------------------------------------------------
-        // PHASE 3: METRICS PROCESSING
-        // -----------------------------------------------------
-        gpio.report_summary();
-        
-        if (gpio.mismatch_count > 0) begin
-            $error("\n========== STATUS: VERIFICATION CRASHED WITH ERRORS ==========\n");
-        end else begin
-            $display("\n========== STATUS: ALL CORES SUCCESSFUL ==========\n");
+              master.read(target_registers[i], rdata);
+              timer.read_exp(target_registers[i], rdata);
+          end
         end
         
+        // -----------------------------------------------------
+        // PHASE 3: TIMER FUNCTIONALITY TEST
+        // -----------------------------------------------------
+        $display("\n========== TIMER FUNCTIONALITY TEST ==========\n");
+        master.write(REG_TIMER, 32'h0);
+        master.write(REG_TIMER_CTRL, 32'h1); 
+      
+        repeat(20) @(posedge apb.HCLK);      // Let it count safely
+
+        master.write(REG_TIMER_CTRL, 32'h0); // Disable timer
+        master.read(REG_TIMER, rdata);       // Read back value
+
+        assert(rdata == timer.get_timer()) 
+        else $error("Timer mismatch DUT=%0d EXP=%0d", rdata, timer.get_timer());
+
+        timer.report_summary();
         $finish;
     end
 

@@ -1,5 +1,5 @@
-`include "gpio_regmap_pkg.sv"
-import gpio_regmap_pkg::*;
+`include "peripherals_regmap_pkg.sv"
+import peripherals_regmap_pkg::*;
 
 module apb_gpio
 #(
@@ -133,7 +133,6 @@ module apb_gpio
             r_gpio_out      <=  '0;
             r_gpio_dir      <=  '0;
             r_gpio_intmask  <=  '0;
-            // r_gpio_intstatus<=  '0;
             for (int i=0;i<32;i++)
                 gpio_padcfg[i]  <=  4'b0010; // DS=high, PE=disabled
         end

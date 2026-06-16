@@ -1,5 +1,5 @@
 // Bring package elements into compilation scope before declaring class
-import gpio_regmap_pkg::*; 
+import peripherals_regmap_pkg::*; 
 
 class gpio_golden_model;
     localparam APB_ADDR_WIDTH = 12;
