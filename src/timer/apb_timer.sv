@@ -1,4 +1,5 @@
-`define REGS_MAX_ADR             2'd2
+`include "peripherals_regmap_pkg.sv"
+import peripherals_regmap_pkg::REG_OFFSET_WORD;
 
 module apb_timer
 #(
@@ -24,7 +25,7 @@ module apb_timer
     logic [$clog2(TIMER_CNT) - 1:0] slave_address_int;
     logic [TIMER_CNT-1:0] [31:0] prdata;
 
-    assign slave_address_int = PADDR[$clog2(TIMER_CNT)+ `REGS_MAX_ADR + 1:`REGS_MAX_ADR + 2];
+    assign slave_address_int = PADDR[$clog2(TIMER_CNT)+ REG_OFFSET_WORD + 1:REG_OFFSET_WORD + 2];
 
     always_comb
     begin

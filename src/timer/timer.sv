@@ -1,4 +1,5 @@
-`include "timer_regmap.sv"
+`include "peripherals_regmap_pkg.sv"
+import peripherals_regmap_pkg::*;
 
 module timer
 #(
@@ -19,20 +20,18 @@ module timer
     output logic                [1:0] irq_o // overflow and cmp interrupt
 );
 
-    // APB register interface
-    logic [`REGS_MAX_IDX-1:0]       register_adr; //register_ad[1:0] because we have 3 registers per timer
-    assign register_adr = PADDR[`REGS_MAX_IDX + 1:2];
-
-    // APB logic: we are always ready to capture the data into our regs
-    // not supporting transfare failure
     assign PREADY  = 1'b1;
     assign PSLVERR = 1'b0;
 
-    // registers
-    logic [0:`REGS_MAX_IDX] [31:0]  regs_q, regs_n;
+    logic [31:0] timer_q, timer_n;
+    logic [31:0] cmp_q, cmp_n;
+    logic [31:0] ctrl_q, ctrl_n;
     logic [31:0] cycle_counter_n, cycle_counter_q;
 
-    logic [2:0] prescaler_int;
+    logic [PRESCALER_STOPBIT-PRESCALER_STARTBIT:0] prescaler_int;
+
+    wire write_enable = PSEL && PENABLE && PWRITE;
+    wire read_enable  = PSEL && PENABLE && !PWRITE;
 
     //irq logic
     always_comb
@@ -40,61 +39,64 @@ module timer
         irq_o = 2'b0;
 
         // overflow irq
-        if (regs_q[`REG_TIMER] == 32'hffff_ffff)
+        if (timer_q == 32'hffff_ffff)
             irq_o[0] = 1'b1;
 
         // compare match irq if compare reg ist set
-        if (regs_q[`REG_CMP] != 'b0 && regs_q[`REG_TIMER] == regs_q[`REG_CMP])
+        if (cmp_q != 'b0 && timer_q == cmp_q)
             irq_o[1] = 1'b1;
 
     end
 
-    assign prescaler_int = regs_q[`REG_TIMER_CTRL][`PRESCALER_STOPBIT:`PRESCALER_STARTBIT];
+    assign prescaler_int = ctrl_q[PRESCALER_STOPBIT:PRESCALER_STARTBIT];
 
-    logic interrupt, timer_enabled;
-    assign interrupt     = irq_o[0] | irq_o[1];
-    assign timer_enabled = regs_q[`REG_TIMER_CTRL][`ENABLE_BIT];
+    wire interrupt     = irq_o[0] | irq_o[1];
+    wire timer_enabled = ctrl_q[ENABLE_BIT];
 
     // register write logic
     always_comb
     begin
-        regs_n = regs_q;
+        timer_n = timer_q;
+        cmp_n   = cmp_q;
+        ctrl_n  = ctrl_q;
         cycle_counter_n = cycle_counter_q + 1;
             
         if(timer_enabled && prescaler_int != 'b0 && prescaler_int == cycle_counter_q) // prescaler
         begin
             if (interrupt) // reset timer on interrupt
-                regs_n[`REG_TIMER] = 1'b0;
+                timer_n = 1'b0;
             else
-                regs_n[`REG_TIMER] = regs_q[`REG_TIMER] + 1;
+                timer_n = timer_q + 1;
         end
         else if (timer_enabled && prescaler_int == 'b0) // normal count mode
         begin
             if (interrupt) // reset timer on interrupt
-                regs_n[`REG_TIMER] = 1'b0;
+                timer_n = 1'b0;
             else
-                regs_n[`REG_TIMER] = regs_q[`REG_TIMER] + 1;
+                timer_n = timer_q + 1;
         end
 
         // reset prescaler cycle counter
-        if (cycle_counter_q >= prescaler_int)
+        if (prescaler_int != 0 && cycle_counter_q >= prescaler_int)
             cycle_counter_n = 32'b0;
 
         // written from APB bus - gets priority
-        if (PSEL && PENABLE && PWRITE)
+        if (write_enable)
         begin
-            case (register_adr)
-                `REG_TIMER:
-                    regs_n[`REG_TIMER] = PWDATA;
+            case (PADDR)
+                REG_TIMER:
+                    timer_n = PWDATA;
 
-                `REG_TIMER_CTRL:
-                    regs_n[`REG_TIMER_CTRL] = PWDATA;
+                REG_TIMER_CTRL:
+                    ctrl_n = PWDATA;
 
-                `REG_CMP:
+                REG_CMP:
                 begin
-                    regs_n[`REG_CMP] = PWDATA;
-                    regs_n[`REG_TIMER] = 32'b0; // reset timer if compare register is written
+                    cmp_n = PWDATA;
+                    timer_n = 32'b0; // reset timer if compare register is written
                 end
+                default:
+                    ;
             endcase
         end
     end
@@ -102,14 +104,18 @@ module timer
     // synchronouse part
     always_ff @(posedge HCLK, negedge HRESETn)
     begin
-        if(~HRESETn)
+        if(!HRESETn)
         begin
-            regs_q          <= '{default: 32'b0};
+            timer_q          <= 32'b0;
+            cmp_q            <= 32'b0;
+            ctrl_q           <= 32'b0;
             cycle_counter_q <= 32'b0;
         end
         else
         begin
-            regs_q          <= regs_n;
+            timer_q          <= timer_n;
+            cmp_q            <= cmp_n;
+            ctrl_q           <= ctrl_n;
             cycle_counter_q <= cycle_counter_n;
         end
     end
@@ -119,20 +125,23 @@ module timer
     begin
         PRDATA = 'b0;
 
-        if (PSEL && PENABLE && !PWRITE)
+        if (read_enable)
         begin
-            case (register_adr)
-                `REG_TIMER:
-                    PRDATA = regs_q[`REG_TIMER];
+            case (PADDR)
+                REG_TIMER:
+                    PRDATA = timer_q;
 
-                `REG_TIMER_CTRL:
-                    PRDATA = regs_q[`REG_TIMER_CTRL];
+                REG_TIMER_CTRL:
+                    PRDATA = ctrl_q;
 
-                `REG_CMP:
-                    PRDATA = regs_q[`REG_CMP];
+                REG_CMP:
+                    PRDATA = cmp_q;
+                    
+                default:
+                    PRDATA = 'b0;
             endcase
-
         end
+
     end
 
 endmodule
