@@ -77,7 +77,7 @@ module timer
         end
 
         // reset prescaler cycle counter
-        if (prescaler_int != 0 && cycle_counter_q >= prescaler_int)
+        if (cycle_counter_q >= prescaler_int)
             cycle_counter_n = 32'b0;
 
         // written from APB bus - gets priority
@@ -88,7 +88,7 @@ module timer
                     timer_n = PWDATA;
 
                 REG_TIMER_CTRL:
-                    ctrl_n = PWDATA;
+                    ctrl_n = PWDATA; //check if i need to reset the counter of prescaler
 
                 REG_CMP:
                 begin
