@@ -216,89 +216,89 @@ module tb_apb_timer;
           timer.fail();
       end
 
-      // // -----------------------------------------------------
-      // // PHASE 6: INTERRUPT PRIORITY TEST
-      // // -----------------------------------------------------
-      // reset_dut();
-      // master.write(REG_CMP, 32'hFFFF_FFFF);
-      // master.write(REG_TIMER, 32'hFFFF_FFFE);
-      // master.write(REG_TIMER_CTRL, 32'h1);
-      // wait(!irq_o);
-      // $display("Interrupt = %0b", irq_o);
+      // -----------------------------------------------------
+      // PHASE 6: INTERRUPT PRIORITY TEST
+      // -----------------------------------------------------
+      reset_dut();
+      master.write(REG_CMP, 32'hFFFF_FFFF);
+      master.write(REG_TIMER, 32'hFFFF_FFFE);
+      master.write(REG_TIMER_CTRL, 32'h1);
+      wait(!irq_o);
+      $display("Interrupt = %0b", irq_o);
 
-      // master.write(REG_TIMER_CTRL, 32'h0);
+      master.write(REG_TIMER_CTRL, 32'h0);
 
-      // // -----------------------------------------------------
-      // // PHASE 7: PRESCALAR TEST
-      // // -----------------------------------------------------
-      // reset_dut();
+      // -----------------------------------------------------
+      // PHASE 7: PRESCALAR TEST
+      // -----------------------------------------------------
+      reset_dut();
 
-      // master.write(REG_TIMER, 32'h0);
-      // timer.write_exp(REG_TIMER, 32'h0); // Sync scoreboard state
+      master.write(REG_TIMER, 32'h0);
+      timer.write_exp(REG_TIMER, 32'h0); // Sync scoreboard state
 
-      // ctrl_word = 32'h0001_0001;
-      // master.write(REG_TIMER_CTRL, ctrl_word); 
-      // timer.write_exp(REG_TIMER_CTRL, ctrl_word); // Sync scoreboard state
+      ctrl_word = 32'h0001_0001;
+      master.write(REG_TIMER_CTRL, ctrl_word); 
+      timer.write_exp(REG_TIMER_CTRL, ctrl_word); // Sync scoreboard state
 			
-      // prescalar = ctrl_word[31:16];
+      prescalar = ctrl_word[31:16];
       
-      // $display("Prescalar : %0d", prescalar);
+      $display("Prescalar : %0d", prescalar);
       
-      // repeat(4*prescalar+1)@(posedge PCLK);
+      repeat(4*prescalar+1)@(posedge PCLK);
 
-      // master.write(REG_TIMER_CTRL, 32'h0);
-      // timer.write_exp(REG_TIMER_CTRL, 32'h0);
+      master.write(REG_TIMER_CTRL, 32'h0);
+      timer.write_exp(REG_TIMER_CTRL, 32'h0);
       
-      // // -----------------------------------------------------
-      // // PHASE 8: PRESCALAR ENABLE WHILE TIMER RUNS
-      // // -----------------------------------------------------
+      // -----------------------------------------------------
+      // PHASE 8: PRESCALAR ENABLE WHILE TIMER RUNS
+      // -----------------------------------------------------
       
-      // reset_dut();
+      reset_dut();
 
-      // master.write(REG_TIMER, 32'h0);
-      // timer.write_exp(REG_TIMER, 32'h0); // Sync scoreboard state
+      master.write(REG_TIMER, 32'h0);
+      timer.write_exp(REG_TIMER, 32'h0); // Sync scoreboard state
       
-      // master.write(REG_TIMER_CTRL, 32'h1); 
-      // timer.write_exp(REG_TIMER_CTRL, 32'h1); // Sync scoreboard state
-      // repeat(5)@(posedge PCLK);
+      master.write(REG_TIMER_CTRL, 32'h1); 
+      timer.write_exp(REG_TIMER_CTRL, 32'h1); // Sync scoreboard state
+      repeat(5)@(posedge PCLK);
       
-      // ctrl_word = 32'h0004_0001;
-      // master.write(REG_TIMER_CTRL, ctrl_word); 
-      // timer.write_exp(REG_TIMER_CTRL, ctrl_word); // Sync scoreboard state
+      ctrl_word = 32'h0004_0001;
+      master.write(REG_TIMER_CTRL, ctrl_word); 
+      timer.write_exp(REG_TIMER_CTRL, ctrl_word); // Sync scoreboard state
 			
-      // prescalar = ctrl_word[31:16];
+      prescalar = ctrl_word[31:16];
       
-      // $display("Prescalar : %0d", prescalar);
+      $display("Prescalar : %0d", prescalar);
       
-      // repeat(11)@(posedge PCLK);
+      repeat(11)@(posedge PCLK);
       
-      // ctrl_word = 32'h0002_0001;
-      // master.write(REG_TIMER_CTRL, ctrl_word); 
-      // timer.write_exp(REG_TIMER_CTRL, ctrl_word); // Sync scoreboard state
+      ctrl_word = 32'h0002_0001;
+      master.write(REG_TIMER_CTRL, ctrl_word); 
+      timer.write_exp(REG_TIMER_CTRL, ctrl_word); // Sync scoreboard state
 			
-      // prescalar = ctrl_word[31:16];
+      prescalar = ctrl_word[31:16];
       
-      // $display("Prescalar : %0d", prescalar);
+      $display("Prescalar : %0d", prescalar);
       
-      // repeat(4*prescalar+1)@(posedge PCLK);
+      repeat(4*prescalar+1)@(posedge PCLK);
 
-      // master.write(REG_TIMER_CTRL, 32'h0);
-      // timer.write_exp(REG_TIMER_CTRL, 32'h0);
+      master.write(REG_TIMER_CTRL, 32'h0);
+      timer.write_exp(REG_TIMER_CTRL, 32'h0);
       
-      // // -----------------------------------------------------
-      // // PHASE 9: TIMER WRITE PRIORITY
-      // // -----------------------------------------------------
-      // reset_dut();
-      // master.write(REG_TIMER, 32'h0);
-      // timer.write_exp(REG_TIMER, 32'h0);
-      // master.write(REG_TIMER_CTRL, 32'h1);
-      // timer.write_exp(REG_TIMER_CTRL, 32'h1);
+      // -----------------------------------------------------
+      // PHASE 9: TIMER WRITE PRIORITY
+      // -----------------------------------------------------
+      reset_dut();
+      master.write(REG_TIMER, 32'h0);
+      timer.write_exp(REG_TIMER, 32'h0);
+      master.write(REG_TIMER_CTRL, 32'h1);
+      timer.write_exp(REG_TIMER_CTRL, 32'h1);
 
-      // repeat(10)@(posedge PCLK);
+      repeat(10)@(posedge PCLK);
 
-      // master.write(REG_TIMER, 32'h100);
+      master.write(REG_TIMER, 32'h100);
 
-      // repeat(10)@(posedge PCLK);
+      repeat(10)@(posedge PCLK);
 
       timer.report_summary();
       $finish;

@@ -1,4 +1,3 @@
-`include "peripherals_pkg.sv"
 import timer_pkg::*;
 
 module timer
