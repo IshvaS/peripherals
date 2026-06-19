@@ -1,5 +1,6 @@
-`include "peripherals_regmap_pkg.sv"
-import peripherals_regmap_pkg::REG_OFFSET_WORD;
+`include "peripherals_pkg.sv" // can remove these include files while synthesis
+`include "timer.sv"
+import timer_pkg::*;
 
 module apb_timer
 #(
@@ -24,8 +25,10 @@ module apb_timer
     logic [TIMER_CNT-1:0] psel_int, pready, pslverr;
     logic [$clog2(TIMER_CNT) - 1:0] slave_address_int;
     logic [TIMER_CNT-1:0] [31:0] prdata;
+    logic [APB_ADDR_WIDTH-1:0] timer_paddr;
 
-    assign slave_address_int = PADDR[$clog2(TIMER_CNT)+ REG_OFFSET_WORD + 1:REG_OFFSET_WORD + 2];
+    assign slave_address_int = PADDR[$clog2(TIMER_CNT)+ REGS_OFFSET_WORD + 1:REGS_OFFSET_WORD + 2];
+    assign timer_paddr = PADDR & ((1 << ADDR_BITS) - 1);
 
     always_comb
     begin
@@ -62,7 +65,7 @@ module apb_timer
             .HCLK       ( HCLK          ),
             .HRESETn    ( HRESETn       ),
 
-            .PADDR      ( PADDR        ),
+            .PADDR      ( timer_paddr  ),
             .PWDATA     ( PWDATA       ),
             .PWRITE     ( PWRITE       ),
             .PSEL       ( psel_int[k]  ),

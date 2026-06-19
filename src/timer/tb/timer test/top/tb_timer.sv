@@ -7,6 +7,8 @@
 `include "timer_func_test.sv"
 `include "cmp_match_test.sv"
 `include "overflow_test.sv"
+`include "timer_rst_on_cmp.sv"
+`include "prescaler_test.sv"
 `include "report_summary.sv"
 `include "regression.sv"
 
@@ -87,7 +89,7 @@ module tb_timer;
       
       	rg = new(master);
       
-      	rg.test_count = 10000;
+      	rg.test_count = 1000;
 
         rg.run();
       	

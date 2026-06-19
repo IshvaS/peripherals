@@ -60,24 +60,24 @@ module timer
         ctrl_n  = ctrl_q;
         cycle_counter_n = cycle_counter_q + 1;
             
-        if(timer_enabled && prescaler_int != 'b0 && prescaler_int == cycle_counter_q) // prescaler
+        if(timer_enabled && prescaler_int != 'h0 && prescaler_int == cycle_counter_q ) // prescaler
         begin
             if (interrupt) // reset timer on interrupt
-                timer_n = 1'b0;
+                timer_n = 32'h0;
             else
                 timer_n = timer_q + 1;
         end
-        else if (timer_enabled && prescaler_int == 'b0) // normal count mode
+        else if (timer_enabled && prescaler_int == 'h0) // normal count mode
         begin
             if (interrupt) // reset timer on interrupt
-                timer_n = 1'b0;
+                timer_n = 32'h0;
             else
                 timer_n = timer_q + 1;
         end
 
         // reset prescaler cycle counter
         if (cycle_counter_q >= prescaler_int)
-            cycle_counter_n = 32'b0;
+            cycle_counter_n = 32'h0;
 
         // written from APB bus - gets priority
         if (write_enable)
@@ -92,7 +92,7 @@ module timer
                 REG_CMP:
                 begin
                     cmp_n = PWDATA;
-                    timer_n = 32'b0; // reset timer if compare register is written
+                    timer_n = 32'h0; // reset timer if compare register is written
                 end
                 default:
                     ;
@@ -105,17 +105,17 @@ module timer
     begin
         if(!HRESETn)
         begin
-            timer_q          <= 32'b0;
-            cmp_q            <= 32'b0;
-            ctrl_q           <= 32'b0;
-            cycle_counter_q <= 32'b0;
+            timer_q          <= 32'h0;
+            cmp_q            <= 32'h0;
+            ctrl_q           <= 32'h0;
+            cycle_counter_q  <= 32'h0;
         end
         else
         begin
             timer_q          <= timer_n;
             cmp_q            <= cmp_n;
             ctrl_q           <= ctrl_n;
-            cycle_counter_q <= cycle_counter_n;
+            cycle_counter_q  <= cycle_counter_n;
         end
     end
 

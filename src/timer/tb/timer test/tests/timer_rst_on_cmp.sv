@@ -9,7 +9,7 @@ class timer_rst_on_cmp extends timer_base_test;
   
   	task run();
 
-        $display("\n========== TIMER FUNCTIONALITY TEST ==========");
+        $display("\n========== TIMER RESET ON COMPARE TEST ==========");
         repeat(test_count) begin
             edata = $urandom();
             master.write(REG_TIMER, edata);
