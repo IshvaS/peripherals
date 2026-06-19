@@ -1,15 +1,29 @@
 class timer_base_test;
 
     apb_driver       master;
-  	static int test_count = 0;
-  	static int pass = 0, fail = 0;
-  	string test_name;
+
+  	static int       test_count = 0;
+  	static int       pass = 0, fail = 0;
+    
+  	string  test_name;
   
-  	static logic [11:0] target_registers[$] =
+  	localparam REG_TIMER0       = 12'h000;
+    localparam REG_TIMER_CTRL0  = 12'h004;
+    localparam REG_CMP0         = 12'h008;
+
+    localparam REG_TIMER1       = 12'h010;
+    localparam REG_TIMER_CTRL1  = 12'h014;
+    localparam REG_CMP1         = 12'h018;
+
+    static logic [11:0] target_registers[$] =
     '{
-        REG_TIMER,
-        REG_TIMER_CTRL,
-        REG_CMP
+        REG_TIMER0,
+        REG_TIMER_CTRL0,
+        REG_CMP0,
+
+        REG_TIMER1,
+        REG_TIMER_CTRL1,
+        REG_CMP1
     };
   
 

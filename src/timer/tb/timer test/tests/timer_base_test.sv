@@ -33,7 +33,7 @@ class timer_base_test;
         pass++;
       else begin
         fail++;
-        $display("Mismatch occurred: %s - Actual = %0h | Expected = %0h",
+        $error("Mismatch occurred: %s - Actual = %0h | Expected = %0h",
                  name,
                  rdata,
                  edata);
