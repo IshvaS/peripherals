@@ -34,6 +34,7 @@ package timer_pkg;
     localparam logic [11:0] REG_CMP         = 12'h008; // BASEADDR + 0x08
 
     localparam int REGS_OFFSET_WORD = 2;
+    localparam int ADDR_BITS        = 4;
 
     localparam int ENABLE_BIT = 0;
     localparam int PRESCALER_STARTBIT = 16;
