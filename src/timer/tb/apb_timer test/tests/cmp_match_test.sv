@@ -13,6 +13,8 @@ class cmp_match_test extends timer_base_test;
 
         repeat(test_count) begin
 
+          // Timer 1
+
           cmp_val = ($urandom()%11)+5;
 
           master.write(REG_CMP0, cmp_val);
@@ -27,7 +29,7 @@ class cmp_match_test extends timer_base_test;
           
           check(rdata, 1, "CMP MATCH TEST 1");
           
-          // Timer 1
+          // Timer 2
           
           cmp_val = ($urandom()%11)+5;
 

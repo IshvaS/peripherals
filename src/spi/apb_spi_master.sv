@@ -230,6 +230,8 @@ module apb_spi_master
                     s_state_rx_next = INT_RX_ACTIVE;
                 end
             end
+            default:
+                ;
         endcase
     end
 

@@ -223,7 +223,7 @@ module i2c_master_bit_ctrl
       if (!nReset)
           cmd_stop <= 1'b0;
       else if (clk_en)
-          cmd_stop <= cmd == `I2C_CMD_STOP;
+          cmd_stop <= cmd == I2C_CMD_STOP;
 
     always @(posedge clk or negedge nReset)
       if (!nReset)

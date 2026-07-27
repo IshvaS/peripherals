@@ -100,3 +100,17 @@ package uart_pkg;
     localparam logic [11:0] REG_SCR = 12'h01C; // BASEREG + 0x1C
 
 endpackage : uart_pkg
+
+// ---------------------------------------------------------
+// Unified Interrupt Controller Register Map
+// ---------------------------------------------------------
+package uic_pkg;
+
+    localparam logic [11:0] REG_IRQ_ENABLE    = 12'h000; // BASEREG + 0x00
+    localparam logic [11:0] REG_IRQ_PENDING   = 12'h004; // BASEREG + 0x04
+    localparam logic [11:0] REG_SET_PENDING   = 12'h008; // BASEREG + 0x08
+    localparam logic [11:0] REG_CLR_PENDING   = 12'h00C; // BASEREG + 0x0C
+
+    localparam int IRQ_COUNT        = 8;
+    
+endpackage : uic_pkg

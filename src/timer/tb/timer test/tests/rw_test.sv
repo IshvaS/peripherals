@@ -16,7 +16,7 @@ class rw_test extends timer_base_test;
 
             foreach(target_registers[i]) begin
 
-              	edata = $urandom() & 32'hFFFF_FFFE; // prevent timer enable
+              	edata = $urandom() & 32'hFFFF_FFFE;
 
                 master.write(
                     target_registers[i],

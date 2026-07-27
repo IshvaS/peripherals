@@ -16,7 +16,7 @@ class rw_test extends timer_base_test;
 
             foreach(target_registers[i]) begin
 
-              	edata = $urandom() & 32'hFFFF_FFFE;
+                edata = $urandom() & 32'hFFFF_FFFE; // prevent timer enable
 
                 master.write(
                     target_registers[i],
@@ -27,6 +27,7 @@ class rw_test extends timer_base_test;
                     target_registers[i],
                     rdata
                 );
+//               $display("ADDR=%0h WRITE=%0h READ=%0h", target_registers[i], edata, rdata );
               	
               check(rdata, edata, "Write/Read Test");
 

@@ -12,20 +12,38 @@ class overflow_test extends timer_base_test;
         $display("\n========== OVERFLOW TEST ==========");
 
         repeat(test_count) begin
+          	
+          	// Timer 1
 
           	edata = 32'hFFFF_FFF0 | ($urandom_range(0, 14));
 
-            master.write(REG_TIMER, edata);
+          	master.write(REG_TIMER0, edata);
 
-            master.write(REG_TIMER_CTRL, 32'h1);
+          	master.write(REG_TIMER_CTRL0, 32'h1);
 
           	wait(tb_timer.irq_o[0]);
 
-            master.write(REG_TIMER_CTRL, 32'h0);
+          	master.write(REG_TIMER_CTRL0, 32'h0);
           	
-          	master.read(REG_TIMER, rdata);
+          	master.read(REG_TIMER0, rdata);
 
-          	check(rdata, 1, "OVERFLOW TEST"); 	
+          	check(rdata, 1, "OVERFLOW TEST 1"); 
+          
+          	// Timer 2
+          
+          	edata = 32'hFFFF_FFF0 | ($urandom_range(0, 14));
+
+            master.write(REG_TIMER1, edata);
+
+            master.write(REG_TIMER_CTRL1, 32'h1);
+
+          	wait(tb_timer.irq_o[2]);
+
+            master.write(REG_TIMER_CTRL1, 32'h0);
+
+            master.read(REG_TIMER1, rdata);
+
+            check(rdata, 1, "OVERFLOW TEST 2"); 
           
         end
 
