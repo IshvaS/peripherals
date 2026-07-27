@@ -1,3 +1,6 @@
+`include "peripherals_pkg.sv"
+import interrupt_pkg::*;
+
 module apb_interrupt
 #(
     parameter APB_ADDR_WIDTH = 12  //APB slaves are 4KB by default
@@ -32,7 +35,7 @@ module apb_interrupt
 
     logic [31:0] enable;
     logic [31:0] pending;
-    logic [4:0]  claim_id;
+    logic [4:0]  claim_id, claim_id_reg;
     logic [31:0] hw_irq;
     logic has_active_int;
     
@@ -58,6 +61,14 @@ module apb_interrupt
         end
     end
 
+    always_ff @(posedge HCLK or negedge HRESETn)
+    begin
+        if(!HRESETn)
+            claim_id_reg <= 5'd0;
+        else
+            claim_id_reg <= claim_id;
+    end
+
     always_ff @(posedge HCLK or negedge HRESETn) 
     begin
         if (!HRESETn) 
@@ -69,12 +80,12 @@ module apb_interrupt
         begin
             if (claim_id_read) 
             begin
-                pending <= (pending & ~(32'h1 << claim_id)) | hw_irq;
+                pending <= (pending & ~(32'h1 << claim_id_reg)) | hw_irq;
             end 
             else if (write_enable) 
             begin
                 case (PADDR)
-                    REG_INT_EN: 
+                    REG_INT_ENABLE: 
                         enable <= PWDATA;
                     
                     REG_INT_SET_PENDING: 
@@ -99,12 +110,12 @@ module apb_interrupt
         if(read_enable) 
         begin
             case(PADDR)
-                REG_INT_EN:
+                REG_INT_ENABLE:
                     PRDATA = enable;
                 REG_INT_PENDING:
                     PRDATA = (pending & enable);
                 REG_INT_CLAIM_ID:
-                    PRDATA = {27'b0, claim_id};
+                    PRDATA = {27'b0, claim_id_reg};
                 default:
                     PRDATA = 32'h0;
             endcase
