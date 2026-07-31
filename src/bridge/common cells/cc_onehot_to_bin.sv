@@ -10,7 +10,7 @@
 
 // Franceco Conti <fconti@iis.ee.ethz.ch>
 
-`include "common_cells/assertions.svh"
+`include "assertions.svh"
 
 module cc_onehot_to_bin #(
     parameter int unsigned  OnehotWidth = 16,

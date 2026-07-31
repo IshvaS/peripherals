@@ -14,7 +14,7 @@
 // - Michael Rogenmoser <michaero@iis.ee.ethz.ch>
 // - Thomas Benz <tbenz@iis.ee.ethz.ch>
 
-`include "common_cells/assertions.svh"
+`include "assertions.svh"
 
 /// Address Decoder: Maps the input address combinatorially to an index.
 /// DYNamic Configuration (DYNC) version

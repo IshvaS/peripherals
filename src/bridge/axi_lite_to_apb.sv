@@ -45,7 +45,7 @@
 // routes the response depending on the `apb_req.psel` bit and `apb_req.pwrite` either to the
 // AXI4Lite B channel for writes and to the R channel for reads.
 
-`include "common_cells/registers.svh"
+`include "registers.svh"
 
 module axi_lite_to_apb #(
   parameter int unsigned NoApbSlaves = 32'd1,  // Number of connected APB slaves
@@ -146,7 +146,7 @@ module axi_lite_to_apb #(
   int_resp_t      apb_rresp;
   logic           apb_rresp_valid, apb_rresp_ready;
 
-  rr_arb_tree #(
+  cc_rr_arb_tree #(
     .NumIn    ( 32'd2     ),
     .DataType ( int_req_t ),
     .ExtPrio  ( 1'b0      ),
@@ -167,7 +167,7 @@ module axi_lite_to_apb #(
   );
 
   if (PipelineRequest) begin : gen_req_spill
-    spill_register #(
+    cc_spill_register #(
       .T      ( int_req_t ),
       .Bypass ( 1'b0      )
     ) i_req_spill (
@@ -181,7 +181,7 @@ module axi_lite_to_apb #(
       .data_o  ( apb_req       )
     );
   end else begin : gen_req_ft_reg
-    fall_through_register #(
+    cc_fall_through_register #(
       .T  ( int_req_t )
     ) i_req_ft_reg (
       .clk_i,
@@ -198,7 +198,7 @@ module axi_lite_to_apb #(
   end
 
   if (PipelineResponse) begin : gen_resp_spill
-    spill_register #(
+    cc_spill_register #(
       .T      ( axi_pkg::resp_t ),
       .Bypass ( 1'b0            )
     ) i_write_resp_spill (
@@ -211,7 +211,7 @@ module axi_lite_to_apb #(
       .ready_i ( axi_lite_req_i.b_ready ),
       .data_o  ( axi_bresp              )
     );
-    spill_register #(
+    cc_spill_register #(
       .T      ( int_resp_t  ),
       .Bypass ( 1'b0        )
     ) i_read_resp_spill (
@@ -225,7 +225,7 @@ module axi_lite_to_apb #(
       .data_o  ( axi_rresp              )
     );
   end else begin : gen_resp_ft_reg
-    fall_through_register #(
+    cc_fall_through_register #(
       .T  ( axi_pkg::resp_t )
     ) i_write_resp_ft_reg (
       .clk_i,
@@ -239,7 +239,7 @@ module axi_lite_to_apb #(
       .ready_i    ( axi_lite_req_i.b_ready  ),
       .data_o     ( axi_bresp               )
     );
-    fall_through_register #(
+    cc_fall_through_register #(
       .T  ( int_resp_t )
     ) i_read_resp_ft_reg (
       .clk_i,
@@ -264,7 +264,7 @@ module axi_lite_to_apb #(
   // output of address decoder to determine PSELx signal
   logic     apb_dec_valid;
   sel_idx_t apb_sel_idx;
-  addr_decode #(
+  cc_addr_decode #(
     .NoIndices( NoApbSlaves ),
     .NoRules  ( NoRules     ),
     .addr_t   ( addr_t      ),
@@ -381,8 +381,8 @@ module axi_lite_to_apb #(
   // pragma translate_on
 endmodule
 
-`include "axi/typedef.svh"
-`include "axi/assign.svh"
+`include "typedef.svh"
+`include "assign.svh"
 
 module axi_lite_to_apb_intf #(
   parameter int unsigned NoApbSlaves = 32'd1,  // Number of connected APB slaves
@@ -451,7 +451,7 @@ module axi_lite_to_apb_intf #(
   `AXI_LITE_ASSIGN_TO_REQ(axi_req, slv)
   `AXI_LITE_ASSIGN_FROM_RESP(slv, axi_resp)
 
-  onehot_to_bin #(
+  cc_onehot_to_bin #(
     .ONEHOT_WIDTH ( NoApbSlaves )
   ) i_onehot_to_bin (
     .onehot ( pselx_o ),
