@@ -28,6 +28,7 @@ package SpiTestPkg;
  //including base_test for testing
  `include "SpiBaseTest.sv"
  `include "SpiApbRegTest.sv"
+ `ifdef SPI_STOCK_TESTS
  `include "SpiSimpleFd8BitsTest.sv"
  `include "SpiSimpleFd16BitsTest.sv"
  `include "SpiSimpleFd24BitsTest.sv"
@@ -52,6 +53,7 @@ package SpiTestPkg;
  `include "SpiSimpleFdRandTest.sv"
  `include "SpiSimpleFdT2cDelayTest.sv"
  `include "AssertionsBaseTest.sv"
+ `endif
 
 endpackage : SpiTestPkg
 
