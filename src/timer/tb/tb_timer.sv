@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module tb_timer_basic;
+module tb_timer;
 
     logic                      HCLK;
     logic                      HRESETn;
