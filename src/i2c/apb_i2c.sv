@@ -1,10 +1,9 @@
-`include "i2c_master_defines.sv"
-`include "i2c_regmap.sv"
+`include "peripherals_pkg.sv"
+import i2c_pkg::*;
 
 module apb_i2c
 #(
-    parameter APB_ADDR_WIDTH = 12  //APB slaves are 4KB by default ---> changed to 32 bit address to align with SoC bus address width 
-                                   // APB address width is 32 bits, but only bits [5:2] are used to decode the registers, as the registers are word aligned (4 bytes)
+    parameter APB_ADDR_WIDTH = 12  //APB slaves are 4KB by default
 )
 (
     input  logic                      HCLK,
@@ -27,12 +26,6 @@ module apb_i2c
     output logic                      sda_pad_o,
     output logic                      sda_padoen_o
 );
-
-    //
-    // variable declarations
-    //
-
-    logic  [7:0] s_apb_addr;
 
     // registers
     reg  [15:0] r_pre; // clock prescale register
@@ -58,40 +51,43 @@ module apb_i2c
     wire i2c_al;      // i2c bus arbitration lost
     reg  al;          // status register arbitration lost bit
 
+    //read and write signals
+    wire write_enable = PSEL && PENABLE && PWRITE;
+    wire read_enable  = PSEL && PENABLE && !PWRITE;
     //
     // module body
     //
 
-    assign s_apb_addr = PADDR[5:2];
-
     always_ff @ (posedge HCLK, negedge HRESETn)
     begin
-        if(~HRESETn)
+        if(!HRESETn)
         begin
             r_pre  <= 'h0;
             r_ctrl <= 'h0;
             r_tx   <= 'h0;
             r_cmd  <= 'h0;
         end
-        else if (PSEL && PENABLE && PWRITE)
+        else if (write_enable)
                 begin
                     if (s_done | i2c_al)
                         r_cmd[7:4] <= 4'h0;          // clear command bits when done
                                                     // or when aribitration lost
                     r_cmd[2:1] <= 2'b0;                 // reserved bits
                     r_cmd[0]   <= 1'b0;                 // clear IRQ_ACK bit
-                    case (s_apb_addr)
-                        `REG_CLK_PRESCALER:
+                    case (PADDR)
+                        REG_CLK_PRESCALER:
                             r_pre <= PWDATA[15:0];
-                        `REG_CTRL:
+                        REG_CTRL:
                             r_ctrl <= PWDATA[7:0];
-                        `REG_TX:
+                        REG_TX:
                             r_tx <= PWDATA[7:0];
-                        `REG_CMD:
+                        REG_CMD:
                         begin
                             if(s_core_en)
                                 r_cmd <= PWDATA[7:0];
                         end
+                        default:
+                            ;
                     endcase
                 end
             else
@@ -107,23 +103,23 @@ module apb_i2c
     always_comb
     begin
         PRDATA = 32'h0;
-        if(PSEL && PENABLE && !PWRITE)
+        if(read_enable)
         begin
-            case (s_apb_addr)
-                `REG_CLK_PRESCALER:
+            case (PADDR)
+                REG_CLK_PRESCALER:
                     PRDATA = {16'h0,r_pre};
-                `REG_CTRL:
+                REG_CTRL:
                     PRDATA = {24'h0,r_ctrl};
-                `REG_RX:
+                REG_RX:
                     PRDATA = {24'h0,s_rx};
-                `REG_STATUS: 
+                REG_STATUS: 
                     PRDATA = {24'h0,s_status};
-                `REG_TX:    
+                REG_TX:    
                     PRDATA = {24'h0,r_tx};
-                `REG_CMD:
+                REG_CMD:
                     PRDATA = {24'h0,r_cmd};
                 default:
-                    PRDATA = 'h0;
+                    PRDATA = 32'h0;
             endcase
         end
     end

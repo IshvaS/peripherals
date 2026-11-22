@@ -142,14 +142,14 @@ module tb_spi_write;
   
   always@(posedge HCLK)begin
     $display("CMD = %h ADR = %h CMD_LEN = %h ADR_LEN = %h DATA_LEN = %h WR = %b RD = %b STAT = %h",
-      dut.spi_cmd,
-dut.spi_addr,
-dut.spi_cmd_len,
-dut.spi_addr_len,
-dut.spi_data_len,
-dut.spi_wr,
-dut.spi_rd,
-      dut.spi_ctrl_status);
+        dut.spi_cmd,
+        dut.spi_addr,
+        dut.spi_cmd_len,
+        dut.spi_addr_len,
+        dut.spi_data_len,
+        dut.spi_wr,
+        dut.spi_rd,
+        dut.spi_ctrl_status);
   end
 
     // ========================================================

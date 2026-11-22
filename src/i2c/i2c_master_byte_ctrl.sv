@@ -1,4 +1,4 @@
-`include "i2c_master_defines.sv"
+import i2c_pkg::*;
 
 module i2c_master_byte_ctrl (
 	clk, nReset, ena, clk_cnt, start, stop, read, write, ack_in, din,
@@ -124,7 +124,7 @@ module i2c_master_byte_ctrl (
 	  if (!nReset)
 	    begin
 			c_state  <= #1 ST_IDLE;
-	        core_cmd <= #1 `I2C_CMD_NOP;
+	        core_cmd <= #1 I2C_CMD_NOP;
 	        core_txd <= #1 1'b0;
 	        shift    <= #1 1'b0;
 	        ld       <= #1 1'b0;
@@ -134,7 +134,7 @@ module i2c_master_byte_ctrl (
 	  else if (i2c_al)
 	   begin
 		   c_state  <= #1 ST_IDLE;
-	       core_cmd <= #1 `I2C_CMD_NOP;
+	       core_cmd <= #1 I2C_CMD_NOP;
 	       core_txd <= #1 1'b0;
 	       shift    <= #1 1'b0;
 	       ld       <= #1 1'b0;
@@ -156,22 +156,22 @@ module i2c_master_byte_ctrl (
 	                if (start)
 	                  begin
 	                      c_state  <= #1 ST_START;
-	                      core_cmd <= #1 `I2C_CMD_START;
+	                      core_cmd <= #1 I2C_CMD_START;
 	                  end
 	                else if (read)
 	                  begin
 	                      c_state  <= #1 ST_READ;
-	                      core_cmd <= #1 `I2C_CMD_READ;
+	                      core_cmd <= #1 I2C_CMD_READ;
 	                  end
 	                else if (write)
 	                  begin
 	                      c_state  <= #1 ST_WRITE;
-	                      core_cmd <= #1 `I2C_CMD_WRITE;
+	                      core_cmd <= #1 I2C_CMD_WRITE;
 	                  end
 	                else // stop
 	                  begin
 	                      c_state  <= #1 ST_STOP;
-	                      core_cmd <= #1 `I2C_CMD_STOP;
+	                      core_cmd <= #1 I2C_CMD_STOP;
 	                  end
 
 	                ld <= #1 1'b1;
@@ -183,12 +183,12 @@ module i2c_master_byte_ctrl (
 	                if (read)
 	                  begin
 	                      c_state  <= #1 ST_READ;
-	                      core_cmd <= #1 `I2C_CMD_READ;
+	                      core_cmd <= #1 I2C_CMD_READ;
 	                  end
 	                else
 	                  begin
 	                      c_state  <= #1 ST_WRITE;
-	                      core_cmd <= #1 `I2C_CMD_WRITE;
+	                      core_cmd <= #1 I2C_CMD_WRITE;
 	                  end
 
 	                ld <= #1 1'b1;
@@ -199,12 +199,12 @@ module i2c_master_byte_ctrl (
 	            if (cnt_done)
 	              begin
 	                  c_state  <= #1 ST_ACK;
-	                  core_cmd <= #1 `I2C_CMD_READ;
+	                  core_cmd <= #1 I2C_CMD_READ;
 	              end
 	            else
 	              begin
 	                  c_state  <= #1 ST_WRITE;       // stay in same state
-	                  core_cmd <= #1 `I2C_CMD_WRITE; // write next bit
+	                  core_cmd <= #1 I2C_CMD_WRITE; // write next bit
 	                  shift    <= #1 1'b1;
 	              end
 
@@ -214,12 +214,12 @@ module i2c_master_byte_ctrl (
 	                if (cnt_done)
 	                  begin
 	                      c_state  <= #1 ST_ACK;
-	                      core_cmd <= #1 `I2C_CMD_WRITE;
+	                      core_cmd <= #1 I2C_CMD_WRITE;
 	                  end
 	                else
 	                  begin
 	                      c_state  <= #1 ST_READ;       // stay in same state
-	                      core_cmd <= #1 `I2C_CMD_READ; // read next bit
+	                      core_cmd <= #1 I2C_CMD_READ; // read next bit
 	                  end
 
 	                shift    <= #1 1'b1;
@@ -232,12 +232,12 @@ module i2c_master_byte_ctrl (
 	               if (stop)
 	                 begin
 	                     c_state  <= #1 ST_STOP;
-	                     core_cmd <= #1 `I2C_CMD_STOP;
+	                     core_cmd <= #1 I2C_CMD_STOP;
 	                 end
 	               else
 	                 begin
 	                     c_state  <= #1 ST_IDLE;
-	                     core_cmd <= #1 `I2C_CMD_NOP;
+	                     core_cmd <= #1 I2C_CMD_NOP;
 
 	                     // generate command acknowledge signal
 	                     cmd_ack  <= #1 1'b1;
@@ -255,7 +255,7 @@ module i2c_master_byte_ctrl (
 	          if (core_ack)
 	            begin
 	                c_state  <= #1 ST_IDLE;
-	                core_cmd <= #1 `I2C_CMD_NOP;
+	                core_cmd <= #1 I2C_CMD_NOP;
 
 	                // generate command acknowledge signal
 	                cmd_ack  <= #1 1'b1;

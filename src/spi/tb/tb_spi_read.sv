@@ -190,17 +190,17 @@ module tb_spi;
     // 4. SLAVE EMULATION (Drive spi_sdi0 during the RX window)
     // ========================================================
     // This block mimics an external SPI Flash/Peripheral device responding with 32'hDEADBEEF
-  logic [31:0] slave_response_data = 32'hF0F0_F0F0;
+    logic [31:0] slave_response_data = 32'hF0F0_F0F0;
     integer rx_bit_idx = 31;
 
     initial begin
-        spi_sdi0 = 1'b0;
+        spi_sdi1 = 1'b0;
         forever begin
             // Sample on the rising edge of the generated SPI clock to change lines cleanly
             @(posedge spi_clk);
             // The FSM enters the RX phase after CMD (8 clocks) + ADDR (8 clocks) = 16 clocks
-          if (!spi_csn1 && (dut.u_spictrl.state == dut.u_spictrl.DATA_RX)) begin
-                spi_sdi0 = slave_response_data[rx_bit_idx];
+            if (!spi_csn1 && (dut.u_spictrl.state == dut.u_spictrl.DATA_RX)) begin
+                spi_sdi1 = slave_response_data[rx_bit_idx];
                 if (rx_bit_idx == 0) 
                     rx_bit_idx = 31; // Reset window index loop
                 else 

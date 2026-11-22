@@ -124,7 +124,7 @@ module tb_spi;
         spi_sdi0 = 1'b0; spi_sdi1 = 1'b0; spi_sdi2 = 1'b0; spi_sdi3 = 1'b0;
         forever begin
             // Change lines on the rising edge of the SPI clock so the master captures cleanly
-            @(posedge spi_clk);
+            @(negedge spi_clk);
             
             if (!spi_csn0 && (dut.u_spictrl.state == dut.u_spictrl.DATA_RX)) begin
                 // Split the current active 4-bit nibble across the 4 SDI input lines

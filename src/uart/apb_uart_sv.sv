@@ -5,9 +5,9 @@ module apb_uart_sv
 (
     input  logic                      CLK,
     input  logic                      RSTN,
-
-
+    /* verilator lint_off UNUSED */
     input  logic [APB_ADDR_WIDTH-1:0] PADDR,
+    /* lint_on */
     input  logic               [31:0] PWDATA,
     input  logic                      PWRITE,
     input  logic                      PSEL,
@@ -28,7 +28,7 @@ module apb_uart_sv
     parameter TX_FIFO_DEPTH = 16; // in bytes
     parameter RX_FIFO_DEPTH = 16; // in bytes
 
-    logic [2:0]       register_adr;
+    logic [11:0]       register_adr;
     logic [9:0][7:0]  regs_q, regs_n;
     logic [1:0]       trigger_level_n, trigger_level_q;
 
@@ -54,7 +54,7 @@ module apb_uart_sv
     logic             fifo_tx_valid;
     logic             tx_valid;
     logic             fifo_rx_valid;
-    logic             fifo_rx_ready; //fixed read error
+    logic             fifo_rx_ready;
     logic             rx_ready;
 
     logic             [7:0] fifo_tx_data;
@@ -205,7 +205,7 @@ module apb_uart_sv
         begin
             case (register_adr)
 
-                THR: // either THR or DLL
+                REG_THR: // either THR or DLL
                 begin
                     if (regs_q[LCR][7]) // Divisor Latch Access Bit (DLAB)
                     begin
@@ -218,7 +218,7 @@ module apb_uart_sv
                     end
                 end
 
-                IER: // either IER or DLM
+                REG_IER: // either IER or DLM
                 begin
                     if (regs_q[LCR][7]) // Divisor Latch Access Bit (DLAB)
                         regs_n[DLM + 'd8] = PWDATA[7:0];
@@ -226,10 +226,10 @@ module apb_uart_sv
                         regs_n[IER] = PWDATA[7:0];
                 end
 
-                LCR:
+                REG_LCR:
                     regs_n[LCR] = PWDATA[7:0];
 
-                FCR: // write only register, fifo control register
+                REG_FCR: // write only register, fifo control register
                 begin
                     rx_fifo_clr_n   = PWDATA[1];
                     tx_fifo_clr_n   = PWDATA[2];
@@ -243,27 +243,25 @@ module apb_uart_sv
 
     end
 
-    logic fifo_rx_ready_n; //fixed read error 
-
     // register read logic
     always_comb
     begin
         PRDATA = 'b0;
         apb_rx_ready = 1'b0;
-        fifo_rx_ready_n = 1'b0;
+        fifo_rx_ready = 1'b0;
         clr_int      = 4'b0;
 
         if (PSEL && PENABLE && !PWRITE)
         begin
             case (register_adr)
-                RBR: // either RBR or DLL
+                REG_RBR: // either RBR or DLL
                 begin
                     if (regs_q[LCR][7]) // Divisor Latch Access Bit (DLAB)
                         PRDATA = {24'b0, regs_q[DLL + 'd8]};
                     else
                     begin
 
-                        fifo_rx_ready_n = 1'b1;
+                        fifo_rx_ready = 1'b1;
 
                         PRDATA = {24'b0, fifo_rx_data[7:0]};
 
@@ -271,16 +269,16 @@ module apb_uart_sv
                     end
                 end
 
-                LSR: // Line Status Register
+                REG_LSR: // Line Status Register
                 begin
                     PRDATA = {24'b0, regs_q[LSR]};
                     clr_int = 4'b1100; // clear parrity interrupt error
                 end
 
-                LCR: // Line Control Register
+                REG_LCR: // Line Control Register
                     PRDATA = {24'b0, regs_q[LCR]};
 
-                IER: // either IER or DLM
+                REG_IER: // either IER or DLM
                 begin
                     if (regs_q[LCR][7]) // Divisor Latch Access Bit (DLAB)
                         PRDATA = {24'b0, regs_q[DLM + 'd8]};
@@ -288,7 +286,7 @@ module apb_uart_sv
                         PRDATA = {24'b0, regs_q[IER]};
                 end
 
-                IIR: // interrupt identification register read only
+                REG_IIR: // interrupt identification register read only
                 begin
                     PRDATA = {24'b0, 1'b1, 1'b1, 2'b0, IIR_o};
                     clr_int = 4'b0100; // clear Transmitter Holding Register Empty
@@ -318,7 +316,6 @@ module apb_uart_sv
             trigger_level_q <= 2'b00;
             tx_fifo_clr_q   <= 1'b0;
             rx_fifo_clr_q   <= 1'b0;
-            fifo_rx_ready   <= 1'b0;
 
         end
         else
@@ -328,12 +325,11 @@ module apb_uart_sv
             trigger_level_q <= trigger_level_n;
             tx_fifo_clr_q   <= tx_fifo_clr_n;
             rx_fifo_clr_q   <= rx_fifo_clr_n;
-            fifo_rx_ready   <= fifo_rx_ready_n;
 
         end
     end
 
-    assign register_adr = {PADDR[2:0]};
+    assign register_adr = PADDR;
     // APB logic: we are always ready to capture the data into our regs
     // not supporting transfare failure
     assign PREADY  = 1'b1;

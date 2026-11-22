@@ -191,6 +191,8 @@ module spi_master_controller
               data_to_tx_valid = spi_ctrl_data_tx_valid;
               spi_ctrl_data_tx_ready = data_to_tx_ready;
           end
+          default:
+            ;
       endcase
   end
 
@@ -515,6 +517,8 @@ module spi_master_controller
             state_next = WAIT_EDGE;
           end
         end
+        default:
+          ;
     endcase
   end
 
