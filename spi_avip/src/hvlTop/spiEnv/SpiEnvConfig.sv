@@ -25,7 +25,7 @@ class SpiEnvConfig extends uvm_object;
 
   // Variable: spiMasterAgentConfig
   // Handle for master agent configuration
-  // SpiMasterAgentConfig spiMasterAgentConfig;
+  SpiMasterAgentConfig spiMasterAgentConfig = NULL;
 
   // Variable: spiSlaveAgentConfig
   // Dynamic array of slave agnet configuration handles

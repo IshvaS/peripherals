@@ -13,7 +13,7 @@ package SpiEnvPkg;
 
   // Importing the required packages
   import SpiGlobalsPkg::*;
-  import SpiMasterPkg::*;
+  // import SpiMasterPkg::*;
   import SpiSlavePkg::*;
 
   // Include all other files

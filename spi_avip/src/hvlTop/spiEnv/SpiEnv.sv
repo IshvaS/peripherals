@@ -94,7 +94,7 @@ function void SpiEnv::connect_phase(uvm_phase phase);
   super.connect_phase(phase);
 
   if(spiEnvConfig.hasVirtualSequencer) begin
-    spiVirtualSequencer.spiMasterSequencer = spiMasterAgent.spiMasterSequencer;
+    // spiVirtualSequencer.spiMasterSequencer = spiMasterAgent.spiMasterSequencer;
     foreach(spiSlaveAgent[i]) begin
       spiVirtualSequencer.spiSlaveSequencer = spiSlaveAgent[i].spiSlaveSequencer;
     end
@@ -104,7 +104,7 @@ function void SpiEnv::connect_phase(uvm_phase phase);
   
   spiSlaveAgent[0].spiSlaveMonitorProxy.slaveAnalysisPort.connect(spiScoreboard.slaveAnalysisFIFO.analysis_export);
 
-  spiMasterAgent.spiMasterMonitorProxy.masterAnalysisPort.connect(spiScoreboard.masterAnalysisFIFO.analysis_export);
+  // spiMasterAgent.spiMasterMonitorProxy.masterAnalysisPort.connect(spiScoreboard.masterAnalysisFIFO.analysis_export);
 endfunction : connect_phase
 
 `endif
