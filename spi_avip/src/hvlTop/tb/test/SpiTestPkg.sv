@@ -27,6 +27,7 @@ package SpiTestPkg;
 
  //including base_test for testing
  `include "SpiBaseTest.sv"
+ `include "SpiApbRegTest.sv"
  `include "SpiSimpleFd8BitsTest.sv"
  `include "SpiSimpleFd16BitsTest.sv"
  `include "SpiSimpleFd24BitsTest.sv"

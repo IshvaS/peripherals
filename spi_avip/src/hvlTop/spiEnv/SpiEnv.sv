@@ -27,7 +27,7 @@ class SpiEnv extends uvm_env;
 
   // Variable: spiMasterAgent
   // declaring master agent handle
-  // SpiMasterAgent spiMasterAgent;
+  SpiMasterAgent spiMasterAgent = NULL;
 
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
